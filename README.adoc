@@ -1,34 +1,63 @@
-= Kafka Monitoring Stack for Docker Compose (Prometheus / Grafana)
+# Kafka Monitoring Stack for Docker Compose (Prometheus / Grafana)
 
 image:https://img.shields.io/badge/License-Apache%202.0-blue.svg[https://github.com/streamthoughts/kafka-monitoring-stack-docker-compose/blob/master/LICENSE]
 image:https://img.shields.io/github/issues-raw/streamthoughts/kafka-monitoring-stack-docker-compose[GitHub issues]
 image:https://img.shields.io/github/stars/streamthoughts/kafka-monitoring-stack-docker-compose?style=social[GitHub Repo stars]
 
-:toc:
-:toc-placement!:
+## Demonstration of using Prometheus and Grafana to monitor an Apache Kafka cluster
 
-This repository demonstrates how to use Prometheus and Grafana for monitoring an Apache Kafka cluster.
+Reference project:
+https://github.com/streamthoughts/kafka-monitoring-stack-docker-compose
 
-toc::[]
+---
 
-== Stack
+[![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#https://github.com/crystalloide/kafka-monitoring-stack-docker-compose)
 
-* Kafka (Confluent)
-* Zookeeper
-* Kafka Schema Registry (Confluent)
-* KSQLDB
-* Kafka Connect
-* Prometheus
-* Grafana
-* AKHQ (https://akhq.io/)
-* ZooNavigator (https://zoonavigator.elkozmon.com/en/stable/)
+## Reminder
 
-== Usage
+To display already instantiated Gitpod workspaces (useful for cleanup):
+https://gitpod.io/workspaces
 
-[source, bash]
-----
-$ ./up -h
+---
 
+## Running this lab outside Gitpod (for example on your own VM)
+
+### 1. Cloning the "Kafka Monitoring" repository
+
+```bash
+git clone https://github.com/streamthoughts/kafka-monitoring-stack-docker-compose.git
+cd kafka-monitoring-stack-docker-compose
+```
+
+### Display current directory
+
+```bash
+pwd
+```
+
+---
+
+## Available Full Stack
+
+- Kafka (Confluent)
+- Zookeeper
+- Kafka Schema Registry (Confluent)
+- KSQLDB
+- Kafka Connect
+- Prometheus
+- Grafana
+- AKHQ (https://akhq.io/)
+- ZooNavigator (https://zoonavigator.elkozmon.com/en/stable/)
+
+---
+
+## Usage
+
+```bash
+./up -h
+```
+
+```text
 --------------------------------------------------------------------------------
       ____        __           _____ __                            _
      / __ \____ _/ /_____ _   / ___// /_________  ____ _____ ___  (_)___  ____ _
@@ -38,187 +67,117 @@ $ ./up -h
                                                                         /____/
 
  Powered by Apache Kafka!
-
 --------------------------------------------------------------------------------
 Usage: ./up [options]
-	 -n <[NAME]>      	: Name of the stack to deploy (required)
-	 -s <[SERVICE]>   	: Service names to deploy (run all services if empty)
-	 -h               	: Print this Help.
+     -n <[NAME]>        : Name of the stack to deploy (required)
+     -s <[SERVICE]>     : Services to deploy (all if omitted)
+     -h                 : Display this help
 
-The table below lists the available docker-compose stacks:
+Available docker-compose stacks:
 
-NAME (./up -n <NAME>)              |	FILE (docker compose -f <FILE> up -d)
-===================================+==================================================
-zk-kafka-multiple-nodes-sasl       |	zk-kafka-multiple-nodes-sasl-stack.yml
-zk-kafka-multiple-nodes            |	zk-kafka-multiple-nodes-stack.yml
-zk-kafka-single-node-full          |	zk-kafka-single-node-full-stack.yml
-zk-kafka-single-node-sasl          |	zk-kafka-single-node-sasl-stack.yml
-zk-kafka-single-node               |	zk-kafka-single-node-stack.yml
-zkless-kafka-multiple-nodes        |	zkless-kafka-multiple-nodes-stack.yml
-----
+NAME                               | FILE
+===================================+============================================
+zk-kafka-multiple-nodes-sasl       | zk-kafka-multiple-nodes-sasl-stack.yml
+zk-kafka-multiple-nodes            | zk-kafka-multiple-nodes-stack.yml
+zk-kafka-single-node-full          | zk-kafka-single-node-full-stack.yml
+zk-kafka-single-node-sasl          | zk-kafka-single-node-sasl-stack.yml
+zk-kafka-single-node               | zk-kafka-single-node-stack.yml
+zkless-kafka-multiple-nodes        | zkless-kafka-multiple-nodes-stack.yml
+```
 
-=== Examples
+---
 
-**To deploy a Kafka Cluster (Kraft)**
-[source, bash]
-----
-$ ./up -n zkless-kafka-multiple-nodes
-----
+## Example
 
-== Getting Started
+### Deploy a Kafka cluster (KRaft mode)
 
-**1. Clone the Kafka Monitoring Suite repository.**
+```bash
+./up -n zkless-kafka-multiple-nodes
+```
 
-[source,bash]
-----
-$ git clone https://github.com/streamthoughts/kafka-monitoring-stack-docker-compose.git
-$ cd kafka-monitoring-stack-docker-compose
-----
+---
 
-**2. Start Confluent/Kafka cluster.**
+## 2. Start the desired Kafka / Confluent cluster
 
-Deploy one of the provided docker-compose stack:
+```bash
+./up -n kraft-single-node-full
+```
 
-_Note: Depending on your network speed, this may take few minutes to download all images._
+---
 
-=== Single Zookeeper/Kafka with Prometheus/Grafana
+## 3. Topic Creation
 
-Start/Stop with:
+Create the topic `demo-topic` with 6 partitions and 3 replicas:
 
-[source,bash]
-----
-$ ./zk-kafka-single-node-stack-start.sh
-$ ./zk-kafka-single-node-stack-stop.sh
+```bash
+docker exec -it kafka101 kafka-topics --create --partitions 6 --replication-factor 3 --topic demo-topic --bootstrap-server kafka101:29092
+```
 
-# or directly
-$ docker-compose -f zk-kafka-single-node-stack.yml up -d
-$ docker-compose -f zk-kafka-single-node-stack.yml down
-----
+---
 
-=== Single Zookeeper / Multiple Kafka with Prometheus/Grafana
+## 4. Message Production
 
-[source,bash]
-----
-$ docker-compose -f zk-kafka-multiple-nodes-stack.yml up -d
-$ docker-compose -f zk-kafka-multiple-nodes-stack.yml down
-----
+Simulate producer activity:
 
-=== Single Zookeeper/Kafka with Prometheus/Grafana (SASL/PLAINTEXT)
+```bash
+docker exec -it kafka101 kafka-producer-perf-test --throughput 500 --num-records 100000000 --topic demo-topic --record-size 100 --producer-props bootstrap.servers=kafka101:29092
+```
 
-[source,bash]
-----
-$ ./zk-kafka-single-node-sasl-stack-start.sh
-$ ./zk-kafka-single-node-sasl-stack-stop.sh
-----
+---
 
-=== Single Zookeeper / Multiple Kafka with Prometheus/Grafana (SASL/PLAINTEXT)
+## 5. Message Consumption
 
-[source,bash]
-----
-$ docker-compose -f  zk-kafka-multiple-nodes-sasl-stack.yml up -d
-$ docker-compose -f  zk-kafka-multiple-nodes-sasl-stack.yml down
-----
+Simulate consumer load:
 
-=== Full Stack (single node Kafka Cluster)
+```bash
+docker exec -it kafka101 kafka-consumer-perf-test --messages 100000000 --timeout 1000000 --topic demo-topic --reporting-interval 1000 --show-detailed-stats --bootstrap-server kafka101:29092
+```
 
-Start/Stop with:
+---
 
-[source,bash]
-----
-$ ./full-single-node-stack-start.sh
-$ ./full-single-node-stack-stop.sh
+## 6. Grafana Visualization
 
-# or directly
-$ docker-compose -f  zk-kafka-single-node-full-stack.yml up -d
-$ docker-compose -f  zk-kafka-single-node-full-stack.yml down
-----
+Open your browser and navigate to:
 
-**3. Create Topic.**
+http://localhost:3000
 
-Create `demo-topic` with 6 partitions and 3 replicas.
+Available dashboards:
 
-[source,bash]
-----
-$ docker exec -it kafka101 \
-kafka-topics \
---create \
---partitions 6 \
---replication-factor 3 \
---topic demo-topic \
---bootstrap-server kafka101:29092
-----
+- Kafka Cluster / Global Health Check
+- Kafka Cluster / Performance
+- Kafka Cluster / Zookeeper Connections
+- Kafka Cluster / JVM & OS
+- Kafka Cluster / Hard Disk Usage
+- Kafka Cluster / Topic Logs
 
-**4. Produce messages.**
+---
 
-Open a new terminal window, generate some message to simulate producer load.
+## Grafana Access
 
-[source,bash]
-----
-$ docker exec -it kafka101 \
-kafka-producer-perf-test \
---throughput 500 \
---num-records 100000000 \
---topic demo-topic \
---record-size 100 \
---producer-props bootstrap.servers=kafka101:29092
-----
+- URL: http://localhost:3000
+- User: `admin`
+- Password: `kafka`
 
-**5. Consume messages.**
+---
 
-Open a new terminal window, generate some message to simulate consumer load.
+## Prometheus Access
 
-[source,bash]
-----
-$ docker exec -it kafka101 \
-kafka-consumer-perf-test \
---messages 100000000 \
---timeout 1000000 \
---topic demo-topic \
---reporting-interval 1000 \
---show-detailed-stats \
---bootstrap-server kafka101:29092
-----
+- URL: http://localhost:9090
 
-**6. Open Grafana.**
+---
 
-Open your favorite web browser and open one of the provided Grafana dashboards :
+## Contributions
 
-* Kafka Cluster / Global Health Check
+Feedback, bug reports, and pull requests are welcome.
 
-image:./assets/kafka-cluster-healthcheck.png[kafka-cluster-healthcheck]
+---
 
-* Kafka Cluster / Performance
+## Support
 
-image:./assets/kafka-cluster-performance.png[kafka-cluster-performance]
+Please ⭐ star the repository to support the project.
 
-* Kafka Cluster / Zookeeper Connections
-* Kafka Cluster / JVM & OS
-* Kafka Cluster / Hard disk usage
-* Kafka Cluster / Topic Logs
+---
 
-image:./assets/kafka-cluster-logs.png[kafka-cluster-log]
+## License
 
-=== Accessing Grafana Web UI
-
-Grafana is accessible at the address : http://localhost:3000
-
-Security are :
-
-* user : `admin`
-* password : `kafka`
-
-=== Accessing Prometheus Web UI
-
-Prometheus is accessible at the address : http://localhost:9090
-
-== 💡 Contributions
-
-Any feedback, bug reports and PRs are greatly appreciated!
-
-== 🙏 Show your support
-
-Please ⭐ this repository to support us!
-
-== Licence
-
-This code base is available under the Apache License, version 2.
+This project is licensed under the Apache License, Version 2.0.
